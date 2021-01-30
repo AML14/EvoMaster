@@ -604,6 +604,69 @@ class PostmanParserTest {
         assertEquals(true, boolProp.value)
     }
 
+    @Test
+    fun testPostmanParser7Requests2PerTestCaseOrdered() {
+        val testCases = postmanParser.parseTestCases(
+            "src/test/resources/postman/query_header_path.postman_collection.json",
+            2,
+            false,
+            0
+        )
+
+        assertEquals(4, testCases.size)
+        assertEquals(2, testCases[0].size)
+        assertEquals(2, testCases[1].size)
+        assertEquals(2, testCases[2].size)
+        assertEquals(1, testCases[3].size)
+
+        val optBase64QueryParam = testCases[0][0].parameters.find { it.name == "optBase64QueryParam" }?.gene as OptionalGene
+        assertTrue(optBase64QueryParam.isActive)
+        assertEquals("ZXhhbXBsZQ==", (optBase64QueryParam.gene as Base64StringGene).data.value)
+
+        assertFalse((testCases[0][1].parameters.find { it.name == "optStringQueryParam" }?.gene as OptionalGene).isActive)
+
+        assertFalse((testCases[1][0].parameters.filterIsInstance<BodyParam>()[0].gene as OptionalGene).isActive)
+
+        assertEquals("path param value", (testCases[1][1].parameters.filterIsInstance<PathParam>()[0].gene as DisruptiveGene<StringGene>).gene.value)
+
+        assertEquals("prop1=val1", (testCases[2][0].parameters.filterIsInstance<PathParam>()[0].gene as DisruptiveGene<StringGene>).gene.value)
+
+        assertEquals("{prop1=val1}", (testCases[2][1].parameters.filterIsInstance<PathParam>()[0].gene as DisruptiveGene<StringGene>).gene.value)
+
+        assertEquals("{prop1=val1, val2 and val3+val4;prop2=val4;prop3=val5}", (testCases[3][0].parameters.filterIsInstance<PathParam>()[0].gene as DisruptiveGene<StringGene>).gene.value)
+    }
+
+    @Test
+    fun testPostmanParser7Requests3PerTestCaseUnordered() {
+        val testCases = postmanParser.parseTestCases(
+            "src/test/resources/postman/query_header_path.postman_collection.json",
+            3,
+            true,
+            0
+        )
+
+        assertEquals(3, testCases.size)
+        assertEquals(3, testCases[0].size)
+        assertEquals(3, testCases[1].size)
+        assertEquals(1, testCases[2].size)
+
+        assertFalse((testCases[0][0].parameters.find { it.name == "optStringQueryParam" }?.gene as OptionalGene).isActive)
+
+        assertEquals("path param value", (testCases[0][1].parameters.filterIsInstance<PathParam>()[0].gene as DisruptiveGene<StringGene>).gene.value)
+
+        assertEquals("{prop1=val1}", (testCases[0][2].parameters.filterIsInstance<PathParam>()[0].gene as DisruptiveGene<StringGene>).gene.value)
+
+        assertEquals("prop1=val1", (testCases[1][0].parameters.filterIsInstance<PathParam>()[0].gene as DisruptiveGene<StringGene>).gene.value)
+
+        assertEquals("{prop1=val1, val2 and val3+val4;prop2=val4;prop3=val5}", (testCases[1][1].parameters.filterIsInstance<PathParam>()[0].gene as DisruptiveGene<StringGene>).gene.value)
+
+        val optBase64QueryParam = testCases[1][2].parameters.find { it.name == "optBase64QueryParam" }?.gene as OptionalGene
+        assertTrue(optBase64QueryParam.isActive)
+        assertEquals("ZXhhbXBsZQ==", (optBase64QueryParam.gene as Base64StringGene).data.value)
+
+        assertFalse((testCases[2][0].parameters.filterIsInstance<BodyParam>()[0].gene as OptionalGene).isActive)
+    }
+
     private fun loadRestCallActions(swagger: OpenAPI): List<RestCallAction> {
         val actions: MutableMap<String, Action> = mutableMapOf()
 

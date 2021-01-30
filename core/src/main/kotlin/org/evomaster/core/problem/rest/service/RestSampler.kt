@@ -425,7 +425,16 @@ class RestSampler : AbstractRestSampler(){
 
         if (config.seedTestCases) {
             val parser = getParser()
-            val seededTestCases = parser.parseTestCases(config.seedTestCasesPath)
+            // test case parsing can vary. If Postman, we could parse multiple requests per test case
+            val seededTestCases = if (parser is PostmanParser && config.seedTestCasesRequestsPerTest > 1)
+                parser.parseTestCases(
+                    config.seedTestCasesPath,
+                    config.seedTestCasesRequestsPerTest,
+                    config.seedTestCasesRandomSequences,
+                    randomness.nextLong()
+                )
+            else
+                parser.parseTestCases(config.seedTestCasesPath)
             adHocInitialIndividuals.addAll(seededTestCases.map { createIndividual(it) })
         }
     }

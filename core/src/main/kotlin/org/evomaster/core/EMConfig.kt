@@ -1278,6 +1278,16 @@ class EMConfig {
     @Cfg("File path where the seeded test cases are located")
     var seedTestCasesPath : String = "postman.postman_collection.json"
 
+    @Experimental
+    @Cfg("Number of seeded requests to include per test case, e.g., to generate stateful test cases. " +
+            "This option should only be used for those formats not supporting sequences of requests, e.g. Postman collections")
+    @Min(1.0)
+    var seedTestCasesRequestsPerTest = 1
+
+    @Experimental
+    @Cfg("When generating sequences of requests out of the seeded test cases, whether to extract them in order or randomly")
+    var seedTestCasesRandomSequences = true
+
 
 
     fun timeLimitInSeconds(): Int {

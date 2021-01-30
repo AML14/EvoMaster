@@ -15,6 +15,7 @@ import java.io.File
 import java.lang.IllegalStateException
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
+import kotlin.random.Random
 
 class PostmanParser(
         defaultRestCallActions: List<RestCallAction>,
@@ -27,17 +28,37 @@ class PostmanParser(
     }
 
     override fun parseTestCases(path: String): MutableList<MutableList<RestCallAction>> {
+        return parseTestCases(path, 1, false, 0)
+    }
+
+    fun parseTestCases(
+        path: String,
+        requestsPerTest: Int,
+        randomSequences: Boolean,
+        randomSeed: Long
+    ): MutableList<MutableList<RestCallAction>> {
         log.info("Parsing seed test cases from Postman collection located at {}", path)
 
         val testCases = mutableListOf<MutableList<RestCallAction>>()
 
+        val generateRequestSequences = requestsPerTest > 1
+        val shuffleSeededRequests = generateRequestSequences && randomSequences
         val postmanContent = File(path).inputStream().readBytes().toString(StandardCharsets.UTF_8)
         val postmanObject = Gson().fromJson(postmanContent, PostmanCollectionObject::class.java)
+        var seededRequests = postmanObject.item
+        if (shuffleSeededRequests) // Shuffling only makes sense when (seedTestCasesRequestsPerTest > 1)
+            seededRequests = seededRequests.shuffled(Random(randomSeed))
 
-        postmanObject.item.forEach { postmanItem ->
-            val postmanRequest = postmanItem.request
+        var currentTestCase = 0
+        var requestsLeft = requestsPerTest
+        seededRequests.forEach { postmanItem ->
+            if (requestsLeft == 0) { // If test case contains all requests, start composing new one
+                currentTestCase++
+                requestsLeft = requestsPerTest
+            }
 
             // Copy action corresponding to Postman request
+            val postmanRequest = postmanItem.request
             val restAction = getRestAction(defaultRestCallActions, postmanRequest)
 
             if (restAction != null) {
@@ -46,7 +67,11 @@ class PostmanParser(
                     updateParameterGenesWithRequest(parameter, postmanRequest, restAction)
                 }
 
-                testCases.add(mutableListOf(restAction))
+                // Add request to the current test case
+                if (requestsLeft == requestsPerTest)
+                    testCases.add(mutableListOf())
+                testCases[currentTestCase].add(restAction)
+                requestsLeft--
             }
         }
 
